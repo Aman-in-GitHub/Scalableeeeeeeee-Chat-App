@@ -2,8 +2,8 @@ import React from "react";
 import { useSocket } from "@/context/SocketProvider";
 
 function App() {
-  const { socket, messages, sendMessage } = useSocket();
   const [message, setMessage] = React.useState("");
+  const { socket, messages, sendMessage } = useSocket();
 
   function handleSubmit() {
     sendMessage(message);

@@ -1,4 +1,13 @@
 import { Server } from "socket.io";
+import { pub, sub } from "@/lib/redis.ts";
+import * as crypto from "node:crypto";
+
+export type MessageType = {
+  id: string;
+  user: string;
+  message?: string;
+  timestamp: string;
+};
 
 export const io = new Server({
   cors: {
@@ -6,30 +15,53 @@ export const io = new Server({
   },
 });
 
-io.on("connection", (socket) => {
-  console.log(`New user connected: ${socket.id}`);
+function createMessage(user: string, message?: string): MessageType {
+  return {
+    id: crypto.randomUUID(),
+    user,
+    message,
+    timestamp: new Date().toISOString(),
+  };
+}
 
-  io.emit("event:enter", {
-    id: Math.random().toString(36).substring(2, 15),
-    user: socket.id,
+async function publisher(channel: string, message: MessageType) {
+  await pub.publish(channel, JSON.stringify(message));
+}
+
+async function setUpSubscriptions() {
+  await sub.subscribe("Message", (message: string) => {
+    io.emit("event:message", JSON.parse(message));
   });
 
-  socket.on("event:message", (data) => {
-    console.log(`New message received: ${data.message} | From: ${socket.id}`);
+  await sub.subscribe("Enter", (message: string) => {
+    io.emit("event:enter", JSON.parse(message));
+  });
 
-    io.emit("event:message", {
-      id: Math.random().toString(36).substring(2, 15),
-      user: socket.id,
-      message: data.message,
+  await sub.subscribe("Leave", (message: string) => {
+    io.emit("event:leave", JSON.parse(message));
+  });
+}
+
+export async function init() {
+  await setUpSubscriptions();
+
+  io.on("connection", async (socket) => {
+    console.log(`New user connected: ${socket.id}`);
+
+    await publisher("Enter", createMessage(socket.id));
+
+    socket.on("event:message", async (data: { message: string }) => {
+      console.log(`New message: ${data.message} | From: ${socket.id}`);
+
+      await publisher("Message", createMessage(socket.id, data.message));
+    });
+
+    socket.on("disconnect", async () => {
+      console.log(`User disconnected: ${socket.id}`);
+
+      await publisher("Leave", createMessage(socket.id));
     });
   });
+}
 
-  socket.on("disconnect", () => {
-    console.log(`User disconnected: ${socket.id}`);
-
-    io.emit("event:leave", {
-      id: Math.random().toString(36).substring(2, 15),
-      user: socket.id,
-    });
-  });
-});
+init();

@@ -1,11 +1,6 @@
 import React from "react";
 import io, { Socket } from "socket.io-client";
-
-type MessageType = {
-  id: string;
-  user: string;
-  message: string;
-};
+import { MessageType } from "../../backend/src/lib/socket.ts";
 
 type SocketContextType = {
   socket: Socket | null;

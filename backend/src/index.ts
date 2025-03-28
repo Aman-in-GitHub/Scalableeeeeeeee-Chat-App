@@ -7,5 +7,5 @@ const httpServer = createServer();
 io.attach(httpServer);
 
 httpServer.listen(PORT, () => {
-  console.log(`http:// Server running on port ${PORT}`);
+  console.log(`http Server running on port ${PORT}`);
 });
