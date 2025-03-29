@@ -26,7 +26,7 @@ This application achieves high scalability through a combination of technologies
 
 This architecture allows individual components (WebSocket handlers, message processors, database writers) to be scaled independently based on load.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Backend:** Node.js, TypeScript
 - **Frontend:** React, Tailwind CSS
