@@ -1,10 +1,16 @@
 import React from "react";
 import io, { Socket } from "socket.io-client";
 import { MessageType } from "../../backend/src/lib/socket.ts";
+import { toast } from "sonner";
+
+type ExtendedMessageType = MessageType & {
+  status?: "enter" | "leave";
+};
 
 type SocketContextType = {
   socket: Socket | null;
-  messages: MessageType[];
+  activeUsers: number;
+  messages: ExtendedMessageType[];
   sendMessage: (message: string) => void;
 };
 
@@ -20,18 +26,35 @@ export function useSocket() {
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [socket, setSocket] = React.useState<Socket | null>(null);
-  const [messages, setMessages] = React.useState<MessageType[]>([]);
+  const [activeUsers, setActiveUsers] = React.useState(0);
+  const [messages, setMessages] = React.useState<ExtendedMessageType[]>([]);
 
   React.useEffect(() => {
     const socket = io("http://localhost:5000");
-    setSocket(socket);
 
-    socket.on("event:message", handleMessages);
+    socket.on("connect", () => {
+      setSocket(socket);
+      toast.success("Connected to chat server");
+    });
     socket.on("event:enter", (data) => {
-      console.log(`${data.user} connected`);
+      if (data.user !== socket.id) {
+        console.log(`${data.user} connected`);
+        toast.info(`${data.user} joined the chat`);
+        data.status = "enter";
+        setMessages((prev) => [...prev, data]);
+      }
     });
     socket.on("event:leave", (data) => {
-      console.log(`${data.user} disconnected`);
+      if (data.user !== socket.id) {
+        console.log(`${data.user} disconnected`);
+        toast.error(`${data.user} left the chat`);
+        data.status = "leave";
+        setMessages((prev) => [...prev, data]);
+      }
+    });
+    socket.on("event:message", handleMessages);
+    socket.on("event:activeUsers", (data) => {
+      setActiveUsers(data);
     });
 
     return () => {
@@ -51,7 +74,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SocketContext.Provider value={{ socket, messages, sendMessage }}>
+    <SocketContext.Provider
+      value={{ activeUsers, socket, messages, sendMessage }}
+    >
       {children}
     </SocketContext.Provider>
   );

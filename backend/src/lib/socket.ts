@@ -1,7 +1,7 @@
 import { Server } from "socket.io";
 import { pub, sub } from "@/lib/redis.ts";
 import * as crypto from "node:crypto";
-import { produceMessage, startConsumer } from "@/lib/kafka.ts";
+import { produceMessage } from "@/lib/kafka.ts";
 
 export type MessageType = {
   id: string;
@@ -16,6 +16,12 @@ export const io = new Server({
     origin: "*",
   },
 });
+
+const activeUsers: Set<string> = new Set();
+
+function broadcastActiveUsers() {
+  io.emit("event:activeUsers", activeUsers.size);
+}
 
 function createMessage(
   user: string,
@@ -36,7 +42,7 @@ async function publisher(channel: string, message: MessageType, topic: string) {
   await produceMessage(topic, JSON.stringify(message));
 }
 
-async function setUpSubscriptions() {
+export async function setUpSubscriptions() {
   await sub.subscribe("Message", (message: string) => {
     io.emit("event:message", JSON.parse(message));
   });
@@ -51,12 +57,12 @@ async function setUpSubscriptions() {
 }
 
 export async function init() {
-  await setUpSubscriptions();
-  await startConsumer("MESSAGES", "scalableeeeeeeee-messages-consumer");
-  await startConsumer("EVENTS", "scalableeeeeeeee-events-consumer");
-
   io.on("connection", async (socket) => {
     console.log(`New user connected: ${socket.id}`);
+
+    activeUsers.add(socket.id);
+
+    broadcastActiveUsers();
 
     await publisher(
       "Enter",
@@ -76,6 +82,10 @@ export async function init() {
 
     socket.on("disconnect", async () => {
       console.log(`User disconnected: ${socket.id}`);
+
+      activeUsers.delete(socket.id);
+
+      broadcastActiveUsers();
 
       await publisher(
         "Leave",
