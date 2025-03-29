@@ -12,6 +12,8 @@
   "packageManager": "pnpm@10.6.3",
   "devDependencies": {
     "@types/node": "^22.13.14",
+    "@types/pg": "^8.11.11",
+    "drizzle-kit": "^0.30.6",
     "prettier": "^3.5.3",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
@@ -22,6 +24,9 @@
     ]
   },
   "dependencies": {
+    "drizzle-orm": "^0.41.0",
+    "kafkajs": "^2.2.4",
+    "pg": "^8.14.1",
     "redis": "^4.7.0",
     "socket.io": "^4.8.1"
   }
